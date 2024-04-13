@@ -10,24 +10,16 @@ class BotManager:
     def __init__(self):
         self.is_running = False
         self.bot_thread = None
-        self.betfair_client = BetfairClient(
-            username=os.getenv("BETFAIR_USERNAME"),
-            password=os.getenv("BETFAIR_PASSWORD"),
-            app_key=os.getenv("BETFAIR_APP_KEY"),
-            certs_dir=os.getenv("BETFAIR_CERT_PATH")
-        )
+        self.betfair_client = BetfairClient()
         self.flumine_client = FlumineClient()
 
     def start_bot(self):
         if not self.is_running:
-            if self.betfair_client.login():
-                self.is_running = True
-                self.bot_thread = threading.Thread(target=self._run_bot)
-                self.bot_thread.start()
-                return True
-            else:
-                logging.error("Failed to connect to the Betfair API.")
-                return False
+            self.is_running = True
+            self.bot_thread = threading.Thread(target=self._run_bot)
+            self.bot_thread.start()
+            logging.info("Bot started successfully")
+            return True
         else:
             logging.info("Bot is already running.")
             return True
@@ -46,7 +38,11 @@ class BotManager:
         while self.is_running:
             try:
                 best_runner = assess_strategies(self.betfair_client)
-                place_bet(self.flumine_client, best_runner)
+                if best_runner:
+                    logging.info(f"Best runner: {best_runner}")
+                    place_bet(self.flumine_client, best_runner)
+                else:
+                    logging.info("No suitable runner found")
                 self.betfair_client.keep_alive()
                 # Add any additional bot logic here
             except Exception as e:
