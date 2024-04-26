@@ -1,7 +1,6 @@
 import os
 import logging
 from dotenv import load_dotenv
-from betfair_client import BetfairClient
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -13,6 +12,7 @@ class FlumineClient:
 
     def get_betfair_client(self):
         try:
+            from betfair_client import BetfairClient
             username = os.getenv('BETFAIR_USERNAME')
             password = os.getenv('BETFAIR_PASSWORD')
             app_key = os.getenv('BETFAIR_APP_KEY')

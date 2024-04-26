@@ -1,60 +1,48 @@
-import os
-from dotenv import load_dotenv
 import requests
-from betfair_client import BetfairClient
+import json
+import logging
+from datetime import datetime
 
-load_dotenv()
+logging.basicConfig(level=logging.DEBUG, filename='download_data.log', format='%(asctime)s - %(levelname)s - %(message)s')
 
-app_key = os.getenv('BETFAIR_APP_KEY')
-cert_path = os.getenv('BETFAIR_CERT_PATH')
-downloads_path = os.getenv('DOWNLOADS_PATH')
+def download_file_list(sport, plan, from_date, to_date, market_types, countries, file_types, session_token):
+    url = 'https://historicdata.betfair.com/api/DownloadListOfFiles'
+    headers = {
+        'content-type': 'application/json',
+        'ssoid': session_token
+    }
+    data = json.dumps({
+        "sport": sport,
+        "plan": plan,
+        "fromDay": from_date.day,
+        "fromMonth": from_date.month,
+        "fromYear": from_date.year,
+        "toDay": to_date.day,
+        "toMonth": to_date.month,
+        "toYear": to_date.year,
+        "marketTypesCollection": market_types,
+        "countriesCollection": countries,
+        "fileTypeCollection": file_types
+    })
+    
+    response = requests.post(url, headers=headers, data=data)
+    logging.debug(f"Request sent to {url} with headers {headers} and payload {data}")
+    logging.debug(f"Response received: {response.text}")
 
-# Initialize the Betfair client from your betfair_client.py
-client = BetfairClient()
-
-# Authenticate and get a session token using betfair_client.py
-session_token = client.get_session_token()
-
-# Betfair Historical Data Service API endpoint for file list download
-historical_data_endpoint = "https://historicdata.betfair.com/api/DownloadListOfFiles"
-
-# Headers for the request
-headers = {
-    'X-Application': app_key,
-    'X-Authentication': session_token,
-    'Content-Type': 'application/json'
-}
-
-# Define the location for saving the downloaded file
-download_location = downloads_path
-
-# Request payload, adjust 'marketStartTime' as needed
-payload = {
-    "marketStartTime": {
-        "from": "2016-03-01T00:00:00Z",
-        "to": "2016-03-31T23:59:59Z"
-    },
-    "marketTypesCollection": ["WIN"],
-    "countriesCollection": ["AU"],
-    "fileTypeCollection": ["M"]
-}
-
-# Perform the download request
-def download_historical_data():
-    # Authenticate using certificates
-    cert_files = (f"{cert_path}/client-2048.crt", f"{cert_path}/client-2048.key")
-
-    # Make the POST request
-    response = requests.post(historical_data_endpoint, headers=headers, json=payload, cert=cert_files)
-
-    # Check response status and download file if successful
     if response.status_code == 200:
-        with open(f"{download_location}/historical_data.zip", 'wb') as file:
-            file.write(response.content)
-        print(f"Data successfully downloaded to {download_location}/historical_data.zip")
+        try:
+            file_paths = response.json()
+            return file_paths
+        except json.JSONDecodeError:
+            logging.error("Failed to decode JSON from response.")
+            return None
     else:
-        print(f"Failed to download data: {response.status_code} - {response.reason}")
+        logging.error(f"Failed to fetch data: {response.status_code} - {response.text}")
+        return None
 
-# Run the download function
-if __name__ == "__main__":
-    download_historical_data()
+# Sample usage
+session_token = "YOUR_TOKEN_HERE"
+file_paths = download_file_list("Horse Racing", "Pro Plan", datetime(2015, 5, 1), datetime(2015, 5, 31),
+                                ["WIN", "PLACE"], ["GB", "IE"], ["M"], session_token)
+if file_paths:
+    print(file_paths)

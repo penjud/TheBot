@@ -29,12 +29,29 @@ def create_table(cursor):
 
 # Function to extract and clean data from the file
 def extract_and_clean_data(file_path):
-    with bz2.open(file_path, 'rb') as file:
-        json_data = json.loads(file.read())
+    cleaned_data = []
+    with bz2.open(file_path, 'rt') as file:  # Opening as 'rt' to read as text
+        for line in file:
+            try:
+                json_data = json.loads(line)
+            except json.JSONDecodeError:
+                print(f"Failed to parse JSON for line: {line}")
+                continue
+            
+            # Example of extraction, modify as per your JSON structure and requirements
+            for market in json_data.get('mc', []):  # Assuming 'mc' contains market changes
+                market_id = market.get('id')
+                for runner in market.get('rc', []):  # Assuming 'rc' contains runner changes
+                    runner_id = runner.get('id')
+                    last_traded_price = runner.get('ltp')
+                    total_matched = runner.get('tv')
+                    status = runner.get('status')
+                    adjustment_factor = runner.get('at')
 
-    # Implement your data extraction and cleaning logic based on json_data structure
-    # ...
-    # return cleaned_data
+                    # Append a tuple of the data to the cleaned_data list
+                    cleaned_data.append((market_id, runner_id, last_traded_price, total_matched, status, adjustment_factor))
+
+    return cleaned_data
 
 # Function to insert data into the database
 def insert_data(cursor, cleaned_data):
@@ -46,7 +63,7 @@ def insert_data(cursor, cleaned_data):
 
 def main():
     # Replace 'path_to_your_data' with the actual path to the extracted data file
-    file_path = 'path_to_your_data'
+    file_path = '/home/penjud/vscode_projects/place/TheBot/Data'
     cleaned_data = extract_and_clean_data(file_path)
     
     # Database operations
@@ -60,3 +77,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

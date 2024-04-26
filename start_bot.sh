@@ -1,20 +1,20 @@
-#!/bin/bash
 echo "Starting PostgreSQL..."
-sudo service postgresql start
+# Add commands to start PostgreSQL if needed
 
 echo "Activating Python virtual environment..."
 source /home/penjud/vscode_projects/place/TheBot/venv/bin/activate
 
-echo "Starting Flask server..."
-export FLASK_APP=/home/penjud/vscode_projects/place/TheBot/server.py
-flask run &
+echo "Setting PYTHONPATH..."
+export PYTHONPATH="/home/penjud/vscode_projects/place/TheBot:$PYTHONPATH"
 
-# Wait for Flask server to start
-echo "Waiting for Flask server to initialize..."
-sleep 5
+echo "Starting Flask server..."
+cd /home/penjud/vscode_projects/place/TheBot
+flask run
 
 echo "Starting the bot via Flask API..."
-curl -X POST http://localhost:5000/start
+# Ensure Flask server is up before making requests
+sleep 5
+curl http://localhost:5000/start-bot
 
 echo "All components have been started."
 

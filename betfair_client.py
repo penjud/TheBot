@@ -3,6 +3,7 @@ import requests
 import threading
 import time
 from dotenv import load_dotenv
+import json
 
 class BetfairClient:
     def __init__(self, username=None, password=None, app_key=None, cert_path=None):
@@ -12,8 +13,10 @@ class BetfairClient:
         self.app_key = app_key or os.getenv('BETFAIR_APP_KEY')
         self.cert_path = cert_path or os.getenv('BETFAIR_CERT_PATH')
         self.cert_files = (f"{self.cert_path}/client-2048.crt", f"{self.cert_path}/client-2048.key")
-        self.session_token = self.login() # Store session token on login
+        self.session_token = self.login()  # Store session token on login
         self.keep_alive_thread = None
+    def get_session_token(self):
+        return self.session_token
 
     def login(self):
         """Log in to Betfair API using certificates and retrieve the session token."""
@@ -21,58 +24,67 @@ class BetfairClient:
         headers = {'X-Application': self.app_key, 'Content-Type': 'application/x-www-form-urlencoded'}
         data = {'username': self.username, 'password': self.password}
         response = requests.post(login_url, data=data, headers=headers, cert=self.cert_files)
-        if response.status_code == 200 and 'sessionToken' in response.json():
-            return response.json()['sessionToken']
+        response.raise_for_status()  # Will raise an HTTPError if the HTTP request returned an unsuccessful status code
+        
+        response_json = response.json()
+        if 'sessionToken' in response_json:
+            return response_json['sessionToken']
         else:
-            error_msg = response.json().get('error', 'No error message available')
+            error_msg = response_json.get('error', 'No error message available')
             raise Exception(f"Failed to log in: {response.status_code} - {error_msg}")
 
     def api_request(self, endpoint, payload):
-        """Make an authenticated API request and handle session token expiration."""
+        """Send requests to the Betfair API."""
         headers = {
-            'X-Authentication': self.session_token,
-            'X-Application': self.app_key,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'X-Application': self.app_key, 
+            'X-Authentication': self.session_token, 
+            'Content-Type': 'application/json'
         }
         response = requests.post(endpoint, json=payload, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        elif 'error' in response.json() and 'INVALID_SESSION_INFORMATION' in response.text:
-            print("Session token invalid, attempting to re-login.")
-            self.session_token = self.login() # Refresh the token
-            return self.api_request(endpoint, payload) # Retry the request with a new session token
-        else:
-            raise Exception(f"API request failed: {response.status_code} - {response.text}")
+        response.raise_for_status()  # Will raise an HTTPError if the HTTP request returned an unsuccessful status code
+        
+        return response.json()
 
     def keep_alive(self):
         """Periodically refresh the session token to prevent expiration."""
+        keep_alive_endpoint = 'https://api.betfair.com/exchange/keepalive/json-rpc/v1'
+        payload = {
+            'jsonrpc': '2.0',
+            'method': 'SessionAPING/v1.0/keepAlive',
+            'params': {},
+            'id': 1
+        }
+        
         while True:
             try:
-                # Assuming there's an endpoint to keep the session alive, replace with actual endpoint
-                keep_alive_endpoint = 'https://api.betfair.com/exchange/keepalive/json-rpc/v1'
-                payload = {'jsonrpc': '2.0', 'method': 'SessionAPING/v1.0/keepAlive', 'params': {}, 'id': 1}
-                self.api_request(keep_alive_endpoint, payload)
-                print("Session kept alive.")
+                response = self.api_request(keep_alive_endpoint, payload)
+                if response.get('result', {}).get('status') != 'SUCCESS':
+                    print(f"Keep alive failed: {response}")
+                else:
+                    print("Session kept alive successfully.")
             except Exception as e:
-                print(f"Failed to keep the session alive: {e}")
-            time.sleep(60) # Wait for 60 seconds before the next keep-alive request
+                print(f"Error during keep alive: {e}")
+            time.sleep(60)  # Wait for 60 seconds before the next keep-alive request
 
     def start_keep_alive(self):
-        """Start the keep_alive thread."""
+        """Start the keep_alive thread to run continuously in the background."""
         if self.keep_alive_thread is None:
-            self.keep_alive_thread = threading.Thread(target=self.keep_alive)
+            self.keep_alive_thread = threading.Thread(target=self.keep_alive, daemon=True)
             self.keep_alive_thread.start()
 
 # Example usage
 if __name__ == "__main__":
     client = BetfairClient()
-    client.start_keep_alive() # Start the keep_alive thread
+    client.start_keep_alive()  # Start the keep_alive thread and continue with other tasks
     endpoint = 'https://api.betfair.com/exchange/betting/json-rpc/v1'
-    payload = {'jsonrpc': '2.0', 'method': 'SportsAPING/v1.0/listEvents', 'params': {}, 'id': 1}
+    payload = {
+        'jsonrpc': '2.0',
+        'method': 'SportsAPING/v1.0/listEvents',
+        'params': {'filter': {'eventTypeIds': ['1']}},  # Example parameter
+        'id': 1
+    }
     try:
         response = client.api_request(endpoint, payload)
         print(response)
     except Exception as e:
-        print(f"Error occurred: {e}")
-
+        print(f"API request error: {e}")
