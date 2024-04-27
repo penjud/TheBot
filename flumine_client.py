@@ -13,12 +13,7 @@ class FlumineClient:
     def get_betfair_client(self):
         try:
             from betfair_client import BetfairClient
-            username = os.getenv('BETFAIR_USERNAME')
-            password = os.getenv('BETFAIR_PASSWORD')
-            app_key = os.getenv('BETFAIR_APP_KEY')
-            certs_dir = os.getenv('BETFAIR_CERT_PATH')
-            
-            return BetfairClient(username, password, app_key, certs_dir)
+            return BetfairClient()
         except Exception as e:
             logger.error(f"Failed to initialize Betfair client: {e}")
             return None

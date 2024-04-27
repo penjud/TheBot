@@ -5,6 +5,22 @@ from betfair_client import BetfairClient
 class TestBetfairClient(unittest.TestCase):
 
     @patch('betfair_client.requests.post')
+    def setUp(self, mock_post):
+        # Mock the response from the Betfair API for login
+        mock_response = MagicMock()
+        mock_response.json.return_value = {'sessionToken': 'mock_session_token'}
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()  # No exception for success status
+        mock_post.return_value = mock_response
+
+        # Initialize the BetfairClient with mock data
+        self.client = BetfairClient(
+            username='mock_username',
+            password='mock_password',
+            app_key='mock_app_key',
+            cert_path='mock_cert_path'
+        )
+    @patch('betfair_client.requests.post')
     def test_login(self, mock_post):
         # Mock the response from the Betfair API
         mock_response = MagicMock()
