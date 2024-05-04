@@ -1,3 +1,5 @@
+# server.py
+
 from flask import Flask, jsonify, Response
 from bot_manager import BotManager
 from typing import Tuple
@@ -8,11 +10,14 @@ bot_manager = BotManager()
 @app.route('/api/status', methods=['GET'])
 def api_status():
     """
-    Returns a JSON response with the status 'success'.
+    Returns a JSON response with the status of the bot.
     """
-    return jsonify({'status': 'success'})
+    if bot_manager.is_running:
+        return jsonify({'status': 'running'}), 200
+    else:
+        return jsonify({'status': 'stopped'}), 200
 
-@app.route('/start', methods=["POST"])
+@app.route('/start-bot', methods=["POST"])
 def start_bot_endpoint() -> Tuple[Response, int]:
     """
     Handles a POST request to start the bot.
@@ -24,10 +29,9 @@ def start_bot_endpoint() -> Tuple[Response, int]:
     if bot_manager.start_bot():
         return jsonify({"message": "Bot started successfully"}), 200
     else:
-        return jsonify({"message": "Failed to start the bot"}), 503
+        return jsonify({"message": "Failed to start the bot"}), 500
 
-@app.route('/stop', methods=["POST"])
-
+@app.route('/stop-bot', methods=["POST"])
 def stop_bot_endpoint() -> Tuple[Response, int]:
     if bot_manager.stop_bot():
         return jsonify({"message": "Bot stopped successfully"}), 200

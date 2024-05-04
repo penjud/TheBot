@@ -1,5 +1,5 @@
 # data_insertion.py
-from db_connection import get_db_connection
+from database.db_connection import get_db_connection
 from error_handling import log_error
 
 def insert_data(table, data):

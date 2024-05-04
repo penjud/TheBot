@@ -1,8 +1,9 @@
+
 import os
 import betfairdatabase as bfdb
 from dotenv import load_dotenv
 import psycopg2
-from historical.db_config import get_db_connection
+from database.db_config import get_db_connection
 
 # Load environment variables
 load_dotenv()

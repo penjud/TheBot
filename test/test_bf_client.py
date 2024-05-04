@@ -1,5 +1,9 @@
-from betfair_client import BetfairClient
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from betfair_client import BetfairClient
 def test_api_request():
     # Initialize the client once and use it for making the API request
     client = BetfairClient(username="penjud", password="_W3r3w0lf70", app_key="mECg2P2ohk92MLXy", cert_path="certs")

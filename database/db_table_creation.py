@@ -1,5 +1,5 @@
 # db_table_creation.py
-from db_connection import get_db_connection
+from database.db_connection import get_db_connection
 
 def create_tables():
     commands = (

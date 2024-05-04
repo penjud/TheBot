@@ -1,7 +1,7 @@
 # bot_automation.py
 from data_extraction import extract_data
 from data_insertion import insert_data
-from db_table_creation import create_tables
+from database.db_table_creation import create_tables
 from error_handling import log_error
 
 def main():
@@ -10,7 +10,7 @@ def main():
         create_tables()
         
         # Extract and clean data
-        data = extract_data('path/to/your/historical_data.bz2')
+        data = extract_data('home/penjud/vscode_projects/place/TheBot/Data/historical_data/historical_data.bz2')
         
         # Insert data into the database
         insert_data('market', data)
