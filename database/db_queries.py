@@ -136,3 +136,64 @@ def get_markets_by_event(event_id):
     except (Exception, psycopg2.Error) as error:
         print("Error fetching markets by event:", error)
         return None
+    
+def get_historical_data_for_strategy_assessment():
+    try:
+        conn = get_connection()
+        if conn is None:
+            return None
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT
+                m.market_id,
+                r.runner_id,
+                r.runner_name,
+                hd.historical_data,
+                mc.market_conditions,
+                ad.additional_data
+            FROM
+                markets m
+                JOIN runners r ON m.market_id = r.market_id
+                JOIN historical_data hd ON m.market_id = hd.market_id
+                JOIN market_conditions mc ON m.market_id = mc.market_id
+                JOIN additional_data ad ON hd.market_id = ad.market_id  # Corrected join condition
+        """)
+        historical_data = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Process the data into a list of dictionaries
+        processed_data = []
+        for market_data in historical_data:
+            market_id, runner_id, runner_name, historical_data_for_runner, market_conditions, additional_data = market_data
+            market_dict = {
+                "market_id": market_id,
+                "runners": [
+                    {
+                        "runner_id": runner_id,
+                        "runner_name": runner_name,
+                        "historical_data": historical_data_for_runner,
+                        "additional_data": additional_data
+                    }
+                ],
+                "market_conditions": market_conditions
+            }
+            processed_data.append(market_dict)
+
+        return processed_data
+    except (Exception, psycopg2.Error) as error:
+        print("Error fetching historical data for strategy assessment:", error)
+        return None
+
+def store_strategy_assessment_results(market_id, selection_id, strategy_score):
+    try:
+        conn = get_connection()
+        if conn is None:
+            return
+        cur = conn.cursor()
+        cur.execute("INSERT INTO strategy_assessment_results (market_id, selection_id, strategy_score) VALUES (%s, %s, %s)", (market_id, selection_id, strategy_score))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except (Exception, psycopg2.Error) as error:
+        print("Error storing strategy assessment results:", error)
