@@ -10,7 +10,7 @@ def main():
         create_tables()
         
         # Extract and clean data
-        data = extract_data('home/penjud/vscode_projects/place/TheBot/Data/historical_data/historical_data.bz2')
+        data = extract_data('home/tim/vscode_projects/place/TheBot/Data/historical_data/historical_data.bz2')
         
         # Insert data into the database
         insert_data('market', data)

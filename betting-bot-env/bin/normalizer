@@ -1,4 +1,4 @@
-#!/home/penjud/vscode_projects/place/TheBot/betting-bot-env/bin/python3
+#!/home/tim/VScode_Projects/place/TheBot/betting-bot-env/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

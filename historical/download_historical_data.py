@@ -45,7 +45,7 @@ def download_file_list(sport, plan, from_date, to_date, market_types, countries,
 
 # Sample usage
 session_token = "YOUR_TOKEN_HERE"
-file_paths = download_file_list("Horse Racing", "Pro Plan", datetime(2015, 5, 1), datetime(2015, 5, 31),
+file_paths = download_file_list("Horse Racing", "Pro Plan", datetime(2015, 7, 1), datetime(2015, 7, 10),
                                 ["WIN", "PLACE"], ["GB", "IE"], ["M"], session_token)
 if file_paths:
     print(file_paths)

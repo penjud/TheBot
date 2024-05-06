@@ -125,14 +125,18 @@ class BetfairClient:
             market_projection=['RUNNER_DESCRIPTION', 'MARKET_LIQUIDITY']
         )
         return market_catalogue
+    
+    def get_session_token(self):
+        """Return the current session token."""
+        return self.session_token
 
 # Example usage
 if __name__ == "__main__":
-        client = BetfairClient()
-        client.start_keep_alive()
-        market_filter = {'eventTypeIds': ['1']}  # Example filter for retrieving specific events
-        try:
-            market_catalogue = client.retrieve_market_catalogue(market_filter)
-            print(market_catalogue)
-        except Exception as e:
-            print(f"Error retrieving market catalogue: {e}")
+    client = BetfairClient()
+    client.start_keep_alive()
+    market_filter = {'eventTypeIds': ['1']} # Example filter for retrieving specific events
+    try:
+        market_catalogue = client.retrieve_market_catalogue(market_filter)
+        print(market_catalogue)
+    except Exception as e:
+        print(f"Error retrieving market catalogue: {e}")

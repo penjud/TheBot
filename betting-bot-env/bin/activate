@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/home/penjud/vscode_projects/place/TheBot/betting-bot-env"
+VIRTUAL_ENV="/home/tim/VScode_Projects/place/TheBot/betting-bot-env"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

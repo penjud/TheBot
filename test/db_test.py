@@ -12,7 +12,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
 # Define the raw SQL query
-# Define the raw SQL query using the text() function
 sql_query = text("SELECT * FROM some_table WHERE id = :x")
 
 # Execute the query with a parameter

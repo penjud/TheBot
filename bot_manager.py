@@ -79,7 +79,7 @@ class BotManager:
                 self.bot_thread.start()
                 logging.info("Bot thread started.")
                 try:
-                    self.bot_thread.join(timeout=5) # Wait for 5 seconds to check if the thread starts properly
+                    self.bot_thread.join(timeout=30) # Wait for 5 seconds to check if the thread starts properly
                     if self.bot_thread.is_alive():
                         self.is_running = True
                         logging.info("Bot started successfully")

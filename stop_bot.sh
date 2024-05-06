@@ -20,7 +20,7 @@ fi
 
 # It's a good practice to ensure that the command 'deactivate' is run in the same shell where 'activate' was run
 echo "Deactivating Python virtual environment..."
-source /home/penjud/vscode_projects/place/TheBot/venv/bin/activate
+source /home/tim/VScode_Projects/place/TheBot/venv/bin/activate
 deactivate
 
 echo "Stopping PostgreSQL..."

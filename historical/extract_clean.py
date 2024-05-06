@@ -81,7 +81,7 @@ def main():
         print("Connected to the database successfully.")
         create_table(conn)  # Create the table if it does not already exist
 
-        directory = '/home/penjud/vscode_projects/place/TheBot/Data/downloads/'
+        directory = '/home/tim/VScode_Projects/place/TheBot/Data/downloads/'
         files = os.listdir(directory)  # Get a list of files in the directory
         bz2_files = [f for f in files if f.endswith('.bz2')]  # Filter for .bz2 files
         if not bz2_files:
