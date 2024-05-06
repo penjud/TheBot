@@ -1,22 +1,22 @@
-# db_manager.py
-from database.db_setup import create_tables
+from sqlalchemy.orm import sessionmaker
+from database.db_setup import engine, Base
+from database.models import Event, Market, Runner, HistoricalData, AdditionalData
 import logging
-from database.db_queries import (
-    get_upcoming_events,
-    get_markets_by_event,
-    get_runners_by_market,
-    get_historical_data_for_runner,
-    get_market_conditions,
-    get_additional_data_for_runner
-)
+
 logging.basicConfig(level=logging.DEBUG)
+
+# Create a configured "Session" class
+Session = sessionmaker(bind=engine)
+
 def setup_database():
     """
     Setup the database by creating tables.
 
     This function orchestrates the creation of all necessary tables in the database.
     """
-    create_tables()
+    Base.metadata.create_all(engine)
+
+from datetime import datetime
 
 def get_event_details():
     """
@@ -25,7 +25,10 @@ def get_event_details():
     Returns:
         List of Event objects that are scheduled to start after the current time.
     """
-    return get_upcoming_events()
+    session = Session()
+    events = session.query(Event).filter(Event.start_time > datetime.now()).all()
+    session.close()
+    return events
 
 def get_market_details(event_id):
     """
@@ -37,7 +40,10 @@ def get_market_details(event_id):
     Returns:
         List of Market objects associated with the given event.
     """
-    return get_markets_by_event(event_id)
+    session = Session()
+    markets = session.query(Market).filter(Market.event_id == event_id).all()
+    session.close()
+    return markets
 
 def get_runner_details(market_id):
     """
@@ -49,7 +55,10 @@ def get_runner_details(market_id):
     Returns:
         List of Runner objects associated with the given market.
     """
-    return get_runners_by_market(market_id)
+    session = Session()
+    runners = session.query(Runner).filter(Runner.market_id == market_id).all()
+    session.close()
+    return runners
 
 def get_runner_historical_data(runner_id):
     """
@@ -61,7 +70,10 @@ def get_runner_historical_data(runner_id):
     Returns:
         List of HistoricalData objects associated with the given runner.
     """
-    return get_historical_data_for_runner(runner_id)
+    session = Session()
+    historical_data = session.query(HistoricalData).filter(HistoricalData.runner_id == runner_id).all()
+    session.close()
+    return historical_data
 
 def get_market_conditions_details(market_id):
     """
@@ -73,7 +85,10 @@ def get_market_conditions_details(market_id):
     Returns:
         The first AdditionalData object associated with the given market, or None if not found.
     """
-    return get_market_conditions(market_id)
+    session = Session()
+    market_conditions = session.query(AdditionalData).filter(AdditionalData.market_id == market_id).first()
+    session.close()
+    return market_conditions
 
 def get_runner_additional_data(runner_id):
     """
@@ -85,4 +100,26 @@ def get_runner_additional_data(runner_id):
     Returns:
         The first AdditionalData object associated with the given runner, or None if not found.
     """
-    return get_additional_data_for_runner(runner_id)
+    session = Session()
+    runner_additional_data = session.query(AdditionalData).filter(AdditionalData.runner_id == runner_id).first()
+    session.close()
+    return runner_additional_data
+
+
+
+
+'''
+def add_new_event(event_data):
+    """
+    Add a new event to the database.
+
+    Args:
+        event_data (dict): A dictionary containing the event data.
+    """
+    session = Session()
+    new_event = Event(**event_data)
+    session.add(new_event)
+    session.commit()
+    session.close()
+
+'''

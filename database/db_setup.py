@@ -1,224 +1,31 @@
-from database.db_config import get_db_connection
-import psycopg2
+# db_setup.py
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
-def create_tables():
-    """Create tables in the PostgreSQL database with correct dependency order and foreign keys."""
-    commands = [
-        """
-        CREATE TABLE IF NOT EXISTS sports (
-            sport_id SERIAL PRIMARY KEY,
-            name VARCHAR(255) NOT NULL
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS events (
-            event_id SERIAL PRIMARY KEY,
-            sport_id INTEGER REFERENCES sports(sport_id),
-            name VARCHAR(255) NOT NULL,
-            start_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            venue VARCHAR(255)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS markets (
-            market_id SERIAL PRIMARY KEY,
-            event_id INTEGER REFERENCES events(event_id),
-            market_name VARCHAR(255) NOT NULL,
-            market_type VARCHAR(255) NOT NULL,
-            market_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            market_status VARCHAR(50) NOT NULL,
-            number_of_winners INTEGER,
-            number_of_active_runners INTEGER,
-            bet_delay INTEGER,
-            bsp_reconciled BOOLEAN,
-            complete BOOLEAN,
-            in_play BOOLEAN,
-            cross_matching BOOLEAN,
-            runners_voidable BOOLEAN,
-            turn_in_play_enabled BOOLEAN,
-            version INTEGER
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS runners (
-            runner_id SERIAL PRIMARY KEY,
-            market_id INTEGER REFERENCES markets(market_id),
-            selection_id INTEGER,
-            runner_name VARCHAR(255) NOT NULL,
-            handicap DOUBLE PRECISION,
-            status VARCHAR(50) NOT NULL,
-            sort_priority INTEGER,
-            last_traded_price DOUBLE PRECISION,
-            total_matched DOUBLE PRECISION,
-            adjustment_factor DOUBLE PRECISION,
-            removal_date TIMESTAMP WITHOUT TIME ZONE
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            user_id SERIAL PRIMARY KEY,
-            username VARCHAR(255) UNIQUE NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            api_key VARCHAR(255),
-            session_token VARCHAR(255)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS bets (
-            bet_id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(user_id),
-            runner_id INTEGER REFERENCES runners(runner_id),
-            stake DECIMAL(18, 2) NOT NULL,
-            price DECIMAL(18, 2) NOT NULL,
-            placed_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            outcome VARCHAR(50)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS market_changes (
-            change_id SERIAL PRIMARY KEY,
-            market_id INTEGER REFERENCES markets(market_id),
-            published_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            change_type VARCHAR(50) NOT NULL
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS price_volume_data (
-            data_id SERIAL PRIMARY KEY,
-            runner_id INTEGER REFERENCES runners(runner_id),
-            market_id INTEGER REFERENCES markets(market_id),
-            price DOUBLE PRECISION NOT NULL,
-            volume DOUBLE PRECISION NOT NULL,
-            time_recorded TIMESTAMP WITHOUT TIME ZONE NOT NULL
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS historical_data (
-            historical_id SERIAL PRIMARY KEY,
-            market_id INTEGER REFERENCES markets(market_id),
-            event_id INTEGER REFERENCES events(event_id),
-            data TEXT NOT NULL,
-            captured_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS additional_data (
-            additional_data_id SERIAL PRIMARY KEY,
-            event_id INTEGER REFERENCES events(event_id),
-            data_type VARCHAR(255) NOT NULL,
-            value TEXT NOT NULL
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS betfair_api_usage (
-            usage_id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES users(user_id),
-            api_key VARCHAR(255),
-            operation VARCHAR(255) NOT NULL,
-            timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL
-        );
-        """,
+def load_environment():
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    dotenv_path = os.path.join(project_root, '.env')
+    load_dotenv(dotenv_path)
+    database_uri = os.getenv("DATABASE_URL")
+    if not database_uri:
+        raise ValueError("No DATABASE_URL found in the environment variables.")
+    return database_uri
 
-            """
-            CREATE TABLE IF NOT EXISTS runners (
-                runner_id SERIAL PRIMARY KEY,
-                market_id INTEGER REFERENCES markets(market_id),
-                selection_id INTEGER,
-                runner_name VARCHAR(255) NOT NULL,
-                handicap DOUBLE PRECISION,
-                status VARCHAR(50) NOT NULL,
-                sort_priority INTEGER,
-                last_traded_price DOUBLE PRECISION,
-                total_matched DOUBLE PRECISION,
-                adjustment_factor DOUBLE PRECISION,
-                removal_date TIMESTAMP WITHOUT TIME ZONE
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                user_id SERIAL PRIMARY KEY,
-                username VARCHAR(255) UNIQUE NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                api_key VARCHAR(255),
-                session_token VARCHAR(255)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS bets (
-                bet_id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(user_id),
-                runner_id INTEGER REFERENCES runners(runner_id),
-                stake DECIMAL(18, 2) NOT NULL,
-                price DECIMAL(18, 2) NOT NULL,
-                placed_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-                outcome VARCHAR(50)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS market_changes (
-                change_id SERIAL PRIMARY KEY,
-                market_id INTEGER REFERENCES markets(market_id),
-                published_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-                change_type VARCHAR(50) NOT NULL
-            );
-            """,
-        """
-        CREATE TABLE IF NOT EXISTS price_volume_data (
-            data_id SERIAL PRIMARY KEY,
-            runner_id INTEGER REFERENCES runners(runner_id),
-            market_id INTEGER REFERENCES markets(market_id),
-            price DOUBLE PRECISION NOT NULL,
-            volume DOUBLE PRECISION NOT NULL,
-            time_recorded TIMESTAMP WITHOUT TIME ZONE NOT NULL
-        );
-        """,
-        """
-            CREATE TABLE IF NOT EXISTS historical_data (
-                historical_id SERIAL PRIMARY KEY,
-                market_id INTEGER REFERENCES markets(market_id),
-                event_id INTEGER REFERENCES events(event_id),
-                data TEXT NOT NULL,
-                captured_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS additional_data (
-                additional_data_id SERIAL PRIMARY KEY,
-                event_id INTEGER REFERENCES events(event_id),
-                data_type VARCHAR(255) NOT NULL,
-                value TEXT NOT NULL
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS betfair_api_usage (
-                usage_id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(user_id),
-                api_key VARCHAR(255),
-                operation VARCHAR(255) NOT NULL,
-                timestamp TIMESTAMP WITHOUT TIME ZONE NOT NULL
-            );
-            """,
-        ]
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        for command in commands:
-            print(f"Attempting to execute command:\n{command}")
-            cursor.execute(command)
-            print("Successfully executed.")
-        conn.commit()
-        print("Changes have been committed to the database.")
-    except psycopg2.DatabaseError as error:
-        print(f"Failed to execute SQL command: {error}")
-    finally:
-        cursor.close()
-        conn.close()
-        print("Database connection closed.")
-        print("Database connection closed.")
+def create_database_engine(uri):
+    return create_engine(uri, connect_args={"options": "-c password_encryption=scram-sha-256"})
 
-if __name__ == "__main__":
-    create_tables()
-    print("Script completed.")
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+def main():
+    uri = load_environment()
+    engine = create_database_engine(uri)
+    Session = sessionmaker(bind=engine)
+    Base.metadata.create_all(engine)
+    print("Database tables created successfully.")
+
+if __name__ == '__main__':
+    main()

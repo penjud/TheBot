@@ -1,10 +1,22 @@
 # server.py
 
 from flask import Flask, jsonify, Response
+from flask_sqlalchemy import SQLAlchemy
+import os
 from bot_manager import BotManager
 from typing import Tuple
 
 app = Flask(__name__)
+
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Import models after initializing the db object
+from database.models import *
+
 bot_manager = BotManager()
 
 @app.route('/api/status', methods=['GET'])
@@ -39,4 +51,8 @@ def stop_bot_endpoint() -> Tuple[Response, int]:
         return jsonify({"message": "Bot is not running"}), 200
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    # Create tables if they don't exist
+    with app.app_context():
+        db.create_all()
+
+    app.run(debug=True)

@@ -4,18 +4,32 @@ from flumine_client import FlumineClient
 from betfair_client import BetfairClient
 from strategy.strategy_manager import StrategyManager
 from betting.betting_bot import BettingBot
-from database.db_manager import setup_database
+from database.db_factory import create_db # Adjust the import path as necessary
 import threading
 import logging
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from database.db_setup import load_environment, create_database_engine
 
+# Load environment variables and create database engine
+database_uri = load_environment()
+engine = create_database_engine(database_uri)
+Session = sessionmaker(bind=engine)
+
+def init_bot():
+    # Create session at the start of the bot
+    session = Session()
+    # Your bot's initialization code here
+    print("Bot initialized with database session")
+    return session
 logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-
 class BotManager:
     def __init__(self):
         self.is_running = False
         self.bot_thread = None
+        self.session = None # Add a session attribute to the class
         
         try:
             logging.info("Initializing Betfair client...")
@@ -51,7 +65,7 @@ class BotManager:
 
         try:
             logging.info("Setting up database...")
-            setup_database()
+            self.session = create_db() # Initialize the session here
             logging.info("Database setup completed successfully.")
         except Exception as e:
             logging.error(f"Failed to set up database: {e}")
@@ -65,7 +79,7 @@ class BotManager:
                 self.bot_thread.start()
                 logging.info("Bot thread started.")
                 try:
-                    self.bot_thread.join(timeout=5)  # Wait for 5 seconds to check if the thread starts properly
+                    self.bot_thread.join(timeout=5) # Wait for 5 seconds to check if the thread starts properly
                     if self.bot_thread.is_alive():
                         self.is_running = True
                         logging.info("Bot started successfully")
@@ -112,7 +126,7 @@ class BotManager:
             self.betting_bot = BettingBot(self.flumine_client)
             
             # Set up the database
-            setup_database()
+            self.session = create_db() # Ensure the session is initialized here
 
             logging.info("Bot components initialized successfully.")
 
@@ -140,3 +154,11 @@ class BotManager:
         except Exception as e:
             logging.error(f"Error initializing bot components: {e}")
             self.is_running = False
+if __name__ == "__main__":
+    session = init_bot()
+    # Example of bot's lifecycle handling
+    try:
+        # Bot operations here
+        print("Bot is running...")
+    finally:
+        session.close()  # Ensure session is closed when done

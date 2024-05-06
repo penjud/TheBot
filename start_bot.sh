@@ -1,19 +1,38 @@
 #!/bin/bash
 
+VENV_PATH="/home/tim/vscode_projects/place/TheBot/venv"
+REQUIREMENTS_PATH="/home/tim/VScode_Projects/place/TheBot/requirements.txt"
+
 echo "Starting PostgreSQL..."
-# Assuming PostgreSQL is installed and configured to start automatically
-# If not, you might need to start it manually. The command can vary depending on your OS.
-# For example, on Ubuntu, you can use:
 sudo service postgresql start
+if [ $? -ne 0 ]; then
+    echo -e "\e[31mFailed to start PostgreSQL\e[0m"
+    exit 1
+fi
+
+if [ ! -d "$VENV_PATH" ]; then
+    echo -e "\e[31mVirtual environment not found at $VENV_PATH. Please create it.\e[0m"
+    exit 1
+fi
 
 echo "Activating Python virtual environment..."
-source /home/penjud/vscode_projects/place/TheBot/venv/bin/activate
+source "$VENV_PATH/bin/activate"
+if [ $? -ne 0 ]; then
+    echo -e "\e[31mFailed to activate Python virtual environment\e[0m"
+    exit 1
+fi
+
+echo "Installing requirements..."
+pip install -r "$REQUIREMENTS_PATH" || {
+    echo -e "\e[33mFailed to install some requirements. Continuing with available packages...\e[0m"
+}
 
 echo "Setting PYTHONPATH..."
-export PYTHONPATH="/home/penjud/vscode_projects/place/TheBot:$PYTHONPATH"
+export PYTHONPATH="/home/tim/VScode_Projects/place/TheBot:$PYTHONPATH"
 
 echo "Starting Flask server..."
-cd /home/penjud/vscode_projects/place/TheBot
+cd /home/tim/vscode_projects/place/TheBot
+export FLASK_APP=server.py
 flask run & # Run Flask in the background
 
 echo "Waiting for Flask server to start..."
