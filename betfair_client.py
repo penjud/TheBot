@@ -54,11 +54,12 @@ class BetfairClient:
             logging.error("Invalid JSON response received.", exc_info=True)
             raise
 
-        if 'sessionToken' in response_json:
-            return response_json['sessionToken']
+        session_token = response_json.get('sessionToken')
+        if session_token:
+            return session_token
         else:
-            error_msg = response_json.get('error', 'No error message available')
-            raise Exception(f"Failed to log in: {response.status_code} - {error_msg}")
+            error_msg = response_json.get('loginStatus', 'Unknown error')
+            raise Exception(f"Failed to retrieve session token. Login status: {error_msg}")
 
     # Additional methods with logging...
 

@@ -1,8 +1,11 @@
+#strategy_assessment_historical.py
 import os
 import logging
 from dotenv import load_dotenv
-from strategy.strategy_assessment import StrategyAssessment
-from database.db_queries import get_historical_data_for_strategy_assessment, store_strategy_assessment_results
+from TheBot.strategy.strategy_assessment_tester import StrategyAssessment
+# strategy_assessment_historical.py
+
+from ..database.db_queries import get_historical_data_for_runner, get_market_conditions, get_additional_data_for_runner
 from betfair_client import BetfairClient
 
 # Configure logging

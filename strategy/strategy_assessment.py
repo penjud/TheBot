@@ -8,49 +8,32 @@ class StrategyAssessment:
     def __init__(self, betfair_client):
         self.betfair_client = betfair_client
 
-    def assess_strategies(self, historical_data):
-        if historical_data is None:
-            print("No historical data available.")
-            return []
-
-        results = []
-        for market_data in historical_data:
-            market_id = market_data["market_id"]
-            runners = market_data["runners"]
-
-            market_book = MarketBook(market_id, runners)
+    def assess_strategies(self, market_catalogue):
+        for market in market_catalogue:
+            market_id = market["marketId"]
+            market_book = self.betfair_client.betting.list_market_book(market_ids=[market_id], price_projection=["EX_BEST_OFFERS"])
+            market_book = market_book[0]
 
             for runner in market_book.runners:
                 runner_id = runner.selection_id
-                historical_data_for_runner = get_historical_data_for_runner(runner_id)
-                market_conditions = get_market_conditions(market_id)
+                historical_data = get_historical_data_for_runner(runner_id)
+                market_data = get_market_conditions(market_id)
                 additional_data = get_additional_data_for_runner(runner_id)
 
-                form_score = self.assess_form(historical_data_for_runner)
+                form_score = self.assess_form(historical_data)
                 price_score = self.assess_price_movements(market_id, runner_id)
-                market_score = self.assess_market_conditions(market_conditions)
+                market_score = self.assess_market_conditions(market_data)
                 additional_score = self.assess_additional_criteria(additional_data)
 
-                strategy_score = sum([form_score, price_score, market_score, additional_score])
+                strategy_score = form_score + price_score + market_score + additional_score
                 runner.strategy_score = strategy_score
-                results.append({
-                    "market_id": market_id,
-                    "selection_id": runner_id,
-                    "strategy_score": strategy_score
-                })
 
-            if market_book.runners:
-                best_runner = max(market_book.runners, key=lambda x: x.strategy_score)
-                stake = calculate_stake(best_runner.strategy_score)
-                market_object = Market(market_id)
-                place_bet(self.betfair_client, market_object, best_runner.selection_id, stake)
-
-        return results
+            best_runner = max(market_book.runners, key=lambda x: x.strategy_score)
+            stake = calculate_stake(best_runner.strategy_score)
+            market_object = Market(market_id)
+            place_bet(self.betfair_client, market_object, best_runner.selection_id, stake)
 
     def assess_form(self, historical_data):
-        if not historical_data:
-            return 0
-
         form_score = 0
         recent_races = historical_data[-3:]  # Consider the last 3 races
         for race in recent_races:
@@ -67,7 +50,7 @@ class StrategyAssessment:
         price_data = self.betfair_client.betting.list_runner_book(market_id=market_id, selection_id=runner_id, price_projection=["EX_BEST_OFFERS"])
         if price_data:
             price_data = price_data[0]
-            if price_data.last_price_traded and price_data.ex.available_to_back and price_data.ex.available_to_lay:
+            if price_data.last_price_traded:
                 current_price = price_data.last_price_traded
                 if current_price < price_data.ex.available_to_back[0].price * 0.9:
                     price_score += 15
@@ -91,10 +74,10 @@ class StrategyAssessment:
 
     def assess_additional_criteria(self, additional_data):
         additional_score = 0
-        if additional_data.get("weather") == "Clear":
+        if additional_data["weather"] == "Clear":
             additional_score += 10
-        if additional_data.get("track_condition") in ["Good", "Good to Firm"]:
+        if additional_data["track_condition"] in ["Good", "Good to Firm"]:
             additional_score += 10
-        if additional_data.get("runner_weight", float('inf')) < 56:  # Assuming weight is in kg
+        if additional_data["runner_weight"] < 56:  # Assuming weight is in kg
             additional_score += 5
         return additional_score

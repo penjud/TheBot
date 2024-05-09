@@ -1,5 +1,4 @@
 # bot_manager.py
-
 from flumine_client import FlumineClient
 from betfair_client import BetfairClient
 from strategy.strategy_manager import StrategyManager

@@ -8,7 +8,7 @@ class TestBetfairClient(unittest.TestCase):
     def setUp(self, mock_post):
         # Mock the response from the Betfair API for login
         mock_response = MagicMock()
-        mock_response.json.return_value = {'sessionToken': 'mock_session_token'}
+        mock_response.json.return_value = {'loginStatus': 'SUCCESS', 'sessionToken': 'mock_session_token'}
         mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()  # No exception for success status
         mock_post.return_value = mock_response
@@ -20,6 +20,7 @@ class TestBetfairClient(unittest.TestCase):
             app_key='mock_app_key',
             cert_path='mock_cert_path'
         )
+
     @patch('betfair_client.requests.post')
     def test_login(self, mock_post):
         # Mock the response from the Betfair API
@@ -42,12 +43,20 @@ class TestBetfairClient(unittest.TestCase):
 
     @patch('betfair_client.requests.post')
     def test_api_request(self, mock_post):
-        # Mock the response from the Betfair API
-        mock_response = MagicMock()
-        mock_response.json.return_value = {'result': {'status': 'SUCCESS'}}
-        mock_response.status_code = 200
-        mock_response.raise_for_status = MagicMock()  # No exception for success status
-        mock_post.return_value = mock_response
+        # Mock the login response from the Betfair API
+        mock_login_response = MagicMock()
+        mock_login_response.json.return_value = {'loginStatus': 'SUCCESS', 'sessionToken': 'mock_session_token'}
+        mock_login_response.status_code = 200
+        mock_login_response.raise_for_status = MagicMock()  # No exception for success status
+
+        # Mock the API request response from the Betfair API
+        mock_api_response = MagicMock()
+        mock_api_response.json.return_value = {'result': {'status': 'SUCCESS'}}
+        mock_api_response.status_code = 200
+        mock_api_response.raise_for_status = MagicMock()  # No exception for success status
+
+        # Configure the mock_post to return the appropriate responses
+        mock_post.side_effect = [mock_login_response, mock_api_response]
 
         # Initialize the BetfairClient with mock data
         client = BetfairClient(

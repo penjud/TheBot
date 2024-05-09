@@ -12,6 +12,15 @@ from requests.adapters import HTTPAdapter
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Set base directories
+DOWNLOAD_DIR = '/home/tim/VScode_Projects/place/TheBot/Data/downloads'
+EXTRACTION_DIR = '/home/tim/VScode_Projects/place/TheBot/Data/historical_data'
+
+# Ensure directories exist
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+os.makedirs(EXTRACTION_DIR, exist_ok=True)
+
+
 class DataDownloadException(Exception):
     """Custom exception for data download failures."""
     pass
@@ -29,16 +38,16 @@ def download_historical_data_files(session_token, file_list):
         data_url = "https://historicdata.betfair.com/api/DownloadFile"
         headers = {'ssoid': session_token}
         params = {'filePath': file_path}
-    try:
-        response = requests.get(data_url, headers=headers, params=params, timeout=60)
-        response.raise_for_status()  # to trigger an HTTPError for bad responses
-        logging.debug("Data successfully retrieved.")
-        save_path = os.path.join('Data', 'downloads', file_name)
-        save_data_to_file(response.content, save_path)
-        extract_bz2_file(save_path, os.path.join('Data', 'historical_data'))
-    except requests.RequestException as e:
-        logging.error(f"Failed to retrieve data: {str(e)}")
-        raise SystemExit(e)  # Stop execution and exit
+        try:
+            response = requests.get(data_url, headers=headers, params=params, timeout=60)
+            response.raise_for_status()  # to trigger an HTTPError for bad responses
+            logging.debug("Data successfully retrieved.")
+            save_path = os.path.join(DOWNLOAD_DIR, file_name)
+            save_data_to_file(response.content, save_path)
+            extract_bz2_file(save_path, EXTRACTION_DIR)
+        except requests.RequestException as e:
+            logging.error(f"Failed to retrieve data: {str(e)}")
+            raise SystemExit(e) # Stop execution and exit
 
     retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
     session = requests.Session()
@@ -50,26 +59,13 @@ def get_file_list(session_token, sport, plan, from_day, from_month, from_year, t
                  file_type_collection=None):
     """
     Retrieves a list of files available for download from Betfair.
-
-    :param session_token: The session token for authentication.
-    :param sport: The sport to filter files by.
-    :param plan: The plan to filter files by.
-    :param from_day: The start day for the file range.
-    :param from_month: The start month for the file range.
-    :param from_year: The start year for the file range.
-    :param to_day: The end day for the file range.
-    :param to_month: The end month for the file range.
-    :param to_year: The end year for the file range.
-    :param event_id: Optional event ID to filter files by.
-    :param event_name: Optional event name to filter files by.
-    :param market_types_collection: Optional collection of market types to filter files by.
-    :param countries_collection: Optional collection of countries to filter files by.
-    :param file_type_collection: Optional collection of file types to filter files by.
-    :return: A list of file paths available for download.
     """
     data_url = "https://historicdata.betfair.com/api/DownloadListOfFiles"
-    headers = {'ssoid': session_token}
-    params = {
+    headers = {
+        'ssoid': session_token,
+        'Content-Type': 'application/json'
+    }
+    data = {
         'sport': sport,
         'plan': plan,
         'fromDay': from_day,
@@ -86,35 +82,32 @@ def get_file_list(session_token, sport, plan, from_day, from_month, from_year, t
     }
 
     try:
-        response = requests.get(data_url, headers=headers, params=params, timeout=60)
+        response = requests.post(data_url, headers=headers, json=data, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to retrieve file list: {e}")
         raise DataDownloadException("Failed to retrieve file list") from e
 
-def save_data_to_file(data, path):
+def save_data_to_file(data, filename):
     """
-    Saves data to a file.
-
-    :param data: The data to save.
-    :param path: The path to save the data to.
+    Saves data to a file using the specified filename within the DOWNLOAD_DIR.
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'wb') as file:
+    file_path = os.path.join(DOWNLOAD_DIR, filename)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)  # Ensure directory exists
+    with open(file_path, 'wb') as file:
         file.write(data)
-    logging.info(f"Data saved to {path}")
+    logging.info(f"Data saved to {file_path}")
+    return file_path
 
-def extract_bz2_file(bz2_path, extract_path):
+def extract_bz2_file(bz2_path, extraction_path):
     """
-    Extracts a BZ2 file to a specified path.
-
-    :param bz2_path: The path to the BZ2 file.
-    :param extract_path: The path to extract the file to.
+    Extracts a BZ2 file to a specified path within the EXTRACTION_DIR.
     """
+    file_name = os.path.basename(bz2_path).replace('.bz2', '')
+    extract_file_path = os.path.join(EXTRACTION_DIR, file_name) # Use the EXTRACTION_DIR
+    os.makedirs(os.path.dirname(extract_file_path), exist_ok=True) # Ensure directory exists
     with bz2.BZ2File(bz2_path, 'rb') as bz2_file:
-        file_name = os.path.basename(bz2_path).replace('.bz2', '')
-        extract_file_path = os.path.join(extract_path, file_name)
         with open(extract_file_path, 'wb') as output_file:
             output_file.write(bz2_file.read())
     logging.info(f"BZ2 file extracted to {extract_file_path}")
@@ -141,10 +134,10 @@ def main():
         sport = "Horse Racing"
         plan = "Pro Plan"
         from_day = "01"
-        from_month = "07"
+        from_month = "08"
         from_year = "2015"
-        to_day = "10"
-        to_month = "07"
+        to_day = "30"
+        to_month = "08"
         to_year = "2015"
         
         file_list = get_file_list(session_token, sport, plan, from_day, from_month, from_year, to_day, to_month, to_year)
@@ -155,7 +148,7 @@ def main():
         logging.error(f"Error during operation: {e}")
 
 # Example of logging around file operations
-file_path = "/home/tim/VScode_Projects/place/TheBot/Data/historical_data"  # Replace "path/to/file" with the actual file path
+file_path = "/home/tim/VScode_Projects/place/TheBot/Data/historical_data/example_file.txt"  # Replace with a valid file name
 logging.debug(f"Saving data to {file_path}")
 try:
     data = b'some data'

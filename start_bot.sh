@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VENV_PATH="/home/tim/vscode_projects/place/TheBot/venv"
+VENV_PATH="/home/tim/VScode_Projects/place/TheBot/venv"
 REQUIREMENTS_PATH="/home/tim/VScode_Projects/place/TheBot/requirements.txt"
 
 echo "Starting PostgreSQL..."
@@ -11,8 +11,12 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ ! -d "$VENV_PATH" ]; then
-    echo -e "\e[31mVirtual environment not found at $VENV_PATH. Please create it.\e[0m"
-    exit 1
+    echo -e "\e[31mVirtual environment not found at $VENV_PATH. Creating it...\e[0m"
+    python3 -m venv "$VENV_PATH"
+    if [ $? -ne 0 ]; then
+        echo -e "\e[31mFailed to create Python virtual environment\e[0m"
+        exit 1
+    fi
 fi
 
 echo "Activating Python virtual environment..."

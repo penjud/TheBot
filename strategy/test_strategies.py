@@ -1,5 +1,5 @@
 # test_strategies.py
-from strategy_assessment import StrategyAssessment
+from TheBot.strategy.strategy_assessment_tester import StrategyAssessment
 from betfair_client import BetfairClient
 from database.db_queries import get_historical_data, get_simulated_market_data
 
